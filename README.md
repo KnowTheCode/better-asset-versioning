@@ -1,6 +1,6 @@
 # Better Asset Versioning
 
-This repository is for the Better Asset Versioning Lab on [Know the Code](https://KnowTheCode.io).
+This repository is for the [Better Asset Versioning Lab](https://knowthecode.io/labs/better-asset-versioning) on [Know the Code](https://KnowTheCode.io).
 
 This WordPress plugin handles the following tasks:
  
@@ -8,7 +8,7 @@ This WordPress plugin handles the following tasks:
     - removing the asset version number query parameter from the URL
     - moving it into the URL as a folder location
 - Set theme's version number to its stylesheet's last modification time
-- Change the theme's stylesheet to the minified version when not in debug mode    
+- Change the theme's stylesheet to the minified version when not in debug mode. [See the code here](https://github.com/KnowTheCode/better-asset-versioning/blob/master/src/Support/asset-helpers.php#L14).    
  
 ## Asset URL Conversion - How it Works
  
@@ -49,7 +49,7 @@ This rewrite will remove our fictitious `path/to` that we added with the plugin.
 
 ## Setting Your Asset's Version Number
 
-Within the [asset-helpers]() file, there's a function that lets you set your asset's version number to the last time it was modified.  No more hardcoding in a version number. Nope, let PHP grab the file's last modification time for you.
+Within the [asset-helpers](https://github.com/KnowTheCode/better-asset-versioning/blob/master/src/Support/asset-helpers.php#L38) file, there's a function that lets you set your asset's version number to the last time it was modified.  No more hardcoding in a version number. Nope, let PHP grab the file's last modification time for you.
  
 When enqueueing, do this:  
 
