@@ -33,28 +33,7 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\launch', 9999 );
  * @return void
  */
 function launch() {
-	load_dependencies();
-
 	get_controller();
-}
-
-/**
- * Load the file dependencies.
- *
- * @since 1.0.0
- *
- * @return void
- */
-function load_dependencies() {
-	$files = array(
-		'src/Support/string-helpers.php',
-		'src/AssetHandler.php',
-	);
-
-	$plugin_dir = trailingslashit( __DIR__ );
-	foreach ( $files as $filename ) {
-		require_once( $plugin_dir . $filename );
-	}
 }
 
 add_filter( 'get_better_assets_versioning_handler', __NAMESPACE__ . '\get_controller' );
@@ -77,8 +56,30 @@ function get_controller() {
 
 		$config = require_once( trailingslashit( __DIR__ ) . 'config/assets.php' );
 
-		$controller = new AssetHandler( $config );
+		$controller = new URLConverter( $config );
 	}
 
 	return $controller;
+}
+
+
+add_action( 'init', __NAMESPACE__ . '\load_dependencies' );
+/**
+ * Load the file dependencies.
+ *
+ * @since 1.0.0
+ *
+ * @return void
+ */
+function load_dependencies() {
+	$files = array(
+		'src/Support/string-helpers.php',
+		'src/Support/asset-helpers.php',
+		'src/URLConverter.php',
+	);
+
+	$plugin_dir = trailingslashit( __DIR__ );
+	foreach ( $files as $filename ) {
+		require_once( $plugin_dir . $filename );
+	}
 }

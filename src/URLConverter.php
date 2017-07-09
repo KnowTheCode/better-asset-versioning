@@ -1,6 +1,6 @@
 <?php
 /**
- * Asset Handler
+ * URL Converter
  *
  * This class handles:
  *
@@ -16,7 +16,7 @@
 
 namespace KnowTheCode\BetterAssetVersioning;
 
-class AssetHandler {
+class URLConverter {
 
 	protected $config;
 

@@ -2,11 +2,14 @@
 /**
  * PHP String Checker and Converter Helper Functions.
  *
+ * @package     KnowTheCode\BetterAssetVersioning
  * @since       1.0.0
  * @author      hellofromTonya
  * @link        https://KnowTheCode.io
  * @license     GNU-2.0+
  */
+
+namespace KnowTheCode\BetterAssetVersioning;
 
 if ( ! function_exists( 'get_substring' ) ) :
 	/**
@@ -35,7 +38,7 @@ if ( ! function_exists( 'get_substring' ) ) :
 	}
 endif;
 
-if ( ! function_exists( 'str_has_substring' ) ) {
+if ( ! function_exists( 'str_has_substring' ) ) :
 	/**
 	 * Checks if a string has a substring
 	 *
@@ -51,9 +54,9 @@ if ( ! function_exists( 'str_has_substring' ) ) {
 	function str_has_substring( $haystack, $needle, $encoding = 'UTF-8' ) {
 		return ( mb_strpos( $haystack, $needle, 0, $encoding ) !== false );
 	}
-}
+endif;
 
-if ( ! function_exists( 'str_starts_with' ) ) {
+if ( ! function_exists( 'str_starts_with' ) ) :
 	/**
 	 * Checks if a string starts with a character or substring.
 	 *
@@ -71,9 +74,9 @@ if ( ! function_exists( 'str_starts_with' ) ) {
 
 		return ( mb_substr( $haystack, 0, $needle_length, $encoding ) === $needle );
 	}
-}
+endif;
 
-if ( ! function_exists( 'str_ends_with' ) ) {
+if ( ! function_exists( 'str_ends_with' ) ) :
 	/**
 	 * Checks if a string (the haystack) ends with a character or substring (the needle).
 	 *
@@ -90,94 +93,5 @@ if ( ! function_exists( 'str_ends_with' ) ) {
 		$starting_offset = - mb_strlen( $needle, $encoding );
 
 		return ( mb_substr( $haystack, $starting_offset, null, $encoding ) === $needle );
-	}
-}
-
-if ( ! function_exists( 'truncate_by_number_characters' ) ) {
-	/**
-	 * Truncates the string by the specified number of characters.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $string_to_truncate  The string to be truncated.
-	 * @param integer $character_limit Number of characters to limit the string by
-	 *                                 Default: 100
-	 * @param string $ending_suffix  Ending characters appending to the end of
-	 *                               the truncated string. Default: '...'
-	 * @param string $encoding  Default is UTF-8
-	 *
-	 * @return bool
-	 */
-	function truncate_by_number_characters( $string_to_truncate, $character_limit = 100, $ending_suffix = '...', $encoding = 'UTF-8' ) {
-		if ( mb_strwidth( $string_to_truncate, $encoding ) <= $character_limit ) {
-			return $string_to_truncate;
-		}
-
-		$string_to_truncate = wp_strip_all_tags( $string_to_truncate );
-
-		$truncated_string = mb_strimwidth( $string_to_truncate, 0, $character_limit, '', $encoding );
-
-		return rtrim( $truncated_string ) . $ending_suffix;
-	}
-}
-
-if ( ! function_exists( 'truncate_by_words' ) ) :
-	/**
-	 * Truncate the given string by the specified the number of words.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $string_to_truncate The string to truncate
-	 * @param int $word_limit Number of characters to limit the string to
-	 * @param string $ending_characters (Optional) Characters to append to the end of the truncated string.
-	 *
-	 * @return string
-	 */
-	function truncate_by_words( $string_to_truncate, $word_limit = 100, $ending_characters = '...' ) {
-		$string_to_truncate = wp_strip_all_tags( $string_to_truncate );
-
-		preg_match( '/^\s*+(?:\S++\s*+){1,' . $word_limit . '}/u', $string_to_truncate, $matches );
-
-		if ( ! isset( $matches[0] ) ) {
-			return $string_to_truncate;
-		}
-
-		if ( mb_strlen( $string_to_truncate ) === mb_strlen( $matches[0] ) ) {
-			return $string_to_truncate;
-		}
-
-		return rtrim( $matches[0] ) . $ending_characters;
-	}
-endif;
-
-if ( ! function_exists( 'convert_str_to_lowercase' ) ) :
-	/**
-	 * Converts the string to lowercase and is UTF-8 safe.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $string_to_convert The string to truncate
-	 * @param string $encoding (Default) UTF-8
-	 *
-	 * @return string
-	 */
-	function convert_str_to_lowercase( $string_to_convert, $encoding = 'UTF-8' ) {
-		return mb_strtolower( $string_to_convert, $encoding );
-	}
-endif;
-
-if ( ! function_exists( 'convert_str_to_uppercase' ) ) :
-	/**
-	 * Converts the string to uppercase and is UTF-8 safe.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $string_to_convert The string to truncate
-	 * @param string $encoding (Default) UTF-8
-	 *
-	 * @return string
-	 */
-	function convert_str_to_uppercase( $string_to_convert, $encoding = 'UTF-8' ) {
-		return mb_strtoupper( $string_to_convert, $encoding );
 	}
 endif;
