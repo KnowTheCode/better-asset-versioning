@@ -2,12 +2,15 @@
 
 This repository is for the Better Asset Versioning Lab on [Know the Code](https://KnowTheCode.io).
 
-It is one WordPress plugin that handles:
+This WordPress plugin handles the following tasks:
  
-- removing the asset version number query parameter from the URL
-- moving it into the URL as a folder location
+- Asset URL conversion 
+    - removing the asset version number query parameter from the URL
+    - moving it into the URL as a folder location
+- Set theme's version number to its stylesheet's last modification time
+- Change the theme's stylesheet to the minified version when not in debug mode    
  
-## How it Works
+## Asset URL Conversion - How it Works
  
 First, it validates if the conversion process should occur.  
 
@@ -27,7 +30,7 @@ This plugin converts the above example into:
 
 Notice that we've added a fictitious folder called `betterassetversioning-{version number}/`.
 
-## Rewrites
+### Rewrites
 
 There are multiple ways to handle rewrites so that WordPress knows how to properly route the asset to the actual file on the web server's hard drive.  In this lab, you need to add the following to your `.htaccess` file, i.e. put it at the very top:
 
@@ -43,6 +46,34 @@ There are multiple ways to handle rewrites so that WordPress knows how to proper
    # END - REWRITE ASSET VERSIONS
 ```
 This rewrite will remove our fictitious `path/to` that we added with the plugin.  Then WordPress is able to find that specific file. 
+
+## Setting Your Asset's Version Number
+
+Within the [asset-helpers]() file, there's a function that lets you set your asset's version number to the last time it was modified.  No more hardcoding in a version number. Nope, let PHP grab the file's last modification time for you.
+ 
+When enqueueing, do this:  
+
+```
+add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
+/**
+ * Enqueue theme assets.
+ *
+ * @since 1.0.0
+ */
+function enqueue_assets() {
+	$asset_file = '/assets/dist/js/jquery.plugin.min.js';
+	
+	wp_enqueue_script(
+		'plugin_js_handle',
+		CHILD_URL . $asset_file,
+		array( 'jquery' ),
+		get_file_current_version_number( CHILD_THEME_DIR . $asset_file ),
+		true
+	);
+}
+```
+
+Notice that the version number is using this plugin's `get_file_current_version_number()` function to grab the asset file's last modification time. 
 
 ## Installation
 

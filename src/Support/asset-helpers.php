@@ -35,7 +35,7 @@ if ( ! function_exists( 'change_theme_stylesheet_uri_to_min_version' ) ) :
 
 endif;
 
-if ( ! function_exists( 'get_asset_file_current_version_number' ) ) :
+if ( ! function_exists( 'get_file_current_version_number' ) ) :
 	/**
 	 * Get the asset file's current version number.  We use `filemtime` to get
 	 * the file's modification time.
@@ -46,7 +46,7 @@ if ( ! function_exists( 'get_asset_file_current_version_number' ) ) :
 	 *
 	 * @return string
 	 */
-	function get_asset_file_current_version_number( $asset_file ) {
+	function get_file_current_version_number( $asset_file ) {
 		return filemtime( $asset_file );
 	}
 endif;
