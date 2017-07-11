@@ -34,7 +34,8 @@ Notice that we've added a fictitious folder called `betterassetversioning-{versi
 
 There are multiple ways to handle rewrites so that WordPress knows how to properly route the asset to the actual file on the web server's hard drive.  In this lab, you need to add the following to your `.htaccess` file, i.e. put it at the very top:
 
-```# START - REWRITE ASSET VERSIONS
+```
+   # START - REWRITE ASSET VERSIONS
    <IfModule mod_rewrite.c>
    RewriteEngine On
    RewriteBase /

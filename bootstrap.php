@@ -33,10 +33,14 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\launch', 9999 );
  * @return void
  */
 function launch() {
-	get_controller();
+	$config = require_once( trailingslashit( __DIR__ ) . 'config/url-converter.php' );
+
+	if ( $config['is_enabled'] === true ) {
+		get_url_converter();
+	}
 }
 
-add_filter( 'get_better_assets_versioning_handler', __NAMESPACE__ . '\get_controller' );
+add_filter( 'get_better_assets_versioning_handler', __NAMESPACE__ . '\get_url_converter' );
 /**
  * Get the instance of Assets Handler
  *
@@ -47,23 +51,20 @@ add_filter( 'get_better_assets_versioning_handler', __NAMESPACE__ . '\get_contro
  *
  * @since 1.0.0
  *
+ * @param array|null $config Runtime configuration parameters
+ *
  * @return AssetsVersioning
  */
-function get_controller() {
+function get_url_converter( $config = null ) {
 	static $controller;
 
 	if ( ! $controller ) {
-
-		$config = require_once( trailingslashit( __DIR__ ) . 'config/assets.php' );
-
 		$controller = new URLConverter( $config );
 	}
 
 	return $controller;
 }
 
-
-add_action( 'init', __NAMESPACE__ . '\load_dependencies' );
 /**
  * Load the file dependencies.
  *
@@ -83,3 +84,5 @@ function load_dependencies() {
 		require_once( $plugin_dir . $filename );
 	}
 }
+
+load_dependencies();
