@@ -6,33 +6,60 @@ This WordPress plugin handles the following tasks:
  
 - Asset URL conversion 
     - removing the asset version number query parameter from the URL
-    - moving it into the URL as a folder location
+    - moving it into the filename
 - Set theme's version number to its stylesheet's last modification time
 - Change the theme's stylesheet to the minified version when not in debug mode. [See the code here](https://github.com/KnowTheCode/better-asset-versioning/blob/master/src/Support/asset-helpers.php#L14).    
  
 ## Asset URL Conversion - How it Works
+
+If the configuration has it turned on, then the plugin loads the `URLConverter`.
+
+### Step 1 - Validating the Registered Version Number
+The first step is to validate the registered version number.  Why? We want to give each asset the ability to bypass the converter. 
+
+This check looks up the registered version number, i.e. when the asset was enqueued, and then checks if it's set to `null`. If yes, then the version number query var is stripped off and then URL is returned.  No conversion happens. 
+
+When would we want to bypass the conversion? If the asset URL has the version number as part of the `path/to`, there's no need to convert it. An example is Font Awesome.
+
+### Step 2 - External Asset Checker
+
+The next step is to check if the asset is external to the website, such as Google Fonts, OptinMonster, and others.  We do not want to touch those URLs as they are handled externally on servers that we do not control.
  
-First, it validates if the conversion process should occur.  
+### Step 3 - Conversion
 
-If no, nothing happens.  We want that check for external assets such as Google Fonts, Bootstrap, and others.
+Finally, if we get to this point, the conversion will occur.  The `URLConverter` strips the query var and moves it into the filename between the filename and extension.
 
-If yes, then it converts the URL.
+For example, here is a theme's CSS URL:
 
-For example, here is the Dashicons CSS URL:
-
-`http://domain.dev/wp-includes/css/dashicons.css?ver=4.8`
+`http://domain.dev/wp-content/themes/your-theme/style.css?ver=2.2.4`
 
 Notice that a query key/value pair are appended to the end of the URL.  Our goal is to remove the URL query parameter and then embed it into the static asset's URL.
 
 This plugin converts the above example into:
 
-`http://domain.dev/wp-includes/css/betterassetversioning-4.8/dashicons.css`
+`http://domain.dev/wp-content/themes/your-theme/style.2.2.4.css`
 
-Notice that we've added a fictitious folder called `betterassetversioning-{version number}/`.
+Notice that the version number is now part of the filename.
 
-### Rewrites
+NOTE:  This technique is copied from other cache-busting techniques, such as [`fbcfwss.php` from ocean90](https://gist.github.com/ocean90/1966227) and HTML5 Boilerplate.
 
-There are multiple ways to handle rewrites so that WordPress knows how to properly route the asset to the actual file on the web server's hard drive.  In this lab, you need to add the following to your `.htaccess` file, i.e. put it at the very top:
+## Rewrites
+
+We've changed the asset's URL.  The filename is different than the actual file on the web server.  Therefore, we need to add a rewrite rule to let the web server handle stripping out the version number in order to locate and serve up the actual file.
+
+For example:
+
+`http://domain.dev/wp-content/themes/your-theme/style.2.2.4.css`
+
+would be changed internally to:
+
+`http://domain.dev/wp-content/themes/your-theme/style.css`
+
+Why? There is no file in the theme called `style.2.2.4.css`. Right? This plugin added the version number `2.2.4` between the filename and extension.  In order for the web server to locate that file, we need to modify the URL back to what it should be.
+
+### Apache Server
+
+For an Apache server, you need to open up the `.htaccess` file and add the following to the top of it:
 
 ```
    # START - REWRITE ASSET VERSIONS
@@ -42,11 +69,29 @@ There are multiple ways to handle rewrites so that WordPress knows how to proper
    
    RewriteCond %{REQUEST_FILENAME} !-f
    RewriteCond %{REQUEST_FILENAME} !-d
-   RewriteRule ^(.+)/betterassetversioning-(.+)/(.+)$ $1/$3 [L]
+   RewriteRule ^(.+)\.(.+)\.(min.js|min.css|js|css)($|\?.*$) $1.$3 [L]
    </IfModule>
    # END - REWRITE ASSET VERSIONS
 ```
-This rewrite will remove our fictitious `path/to` that we added with the plugin.  Then WordPress is able to find that specific file. 
+
+Notice that we are adding a `RewriteRule` to identify the filename pattern and then rewrite it to the actual file.
+
+CREDIT: This configuration comes from [ocean90](https://gist.github.com/ocean90/1966227).
+
+
+### Nginx Server (including VVV)
+
+For an Nginx server, you need to open up the website's `.conf` file and add the following to the top of it:
+
+```
+    # START - REWRITE ASSET VERSIONS
+    location ~* (.+)\.(?:\d+)\.(min.js|min.css|js|css|png|jpg|jpeg|gif)$ {
+      try_files $uri $1.$2;
+    }
+    # END - REWRITE ASSET VERSIONS
+```
+
+CREDIT: This configuration comes from [HTML5 Boilerplate](https://github.com/h5bp/server-configs-nginx/blob/master/h5bp/location/cache-busting.conf).
 
 ## Setting Your Asset's Version Number
 
@@ -76,6 +121,17 @@ function enqueue_assets() {
 
 Notice that the version number is using this plugin's `get_file_current_version_number()` function to grab the asset file's last modification time. 
 
+When enqueuing an asset that already has the version number as part of the `path/to`, do the following:
+
+```
+	wp_enqueue_style(
+		'plugin_js_handle',
+		'//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css',
+		array(),
+		null
+	);
+```
+
 ## Installation
 
 Installation from GitHub is as simple as cloning the repo onto your local machine.  To clone the repo, do the following:
@@ -85,8 +141,10 @@ Installation from GitHub is as simple as cloning the repo onto your local machin
 - Otherwise, if you are on a Mac, then use Terminal.  For Windows, use Git Bash.
 2. Then type: `git clone https://github.com/KnowTheCode/better-asset-versioning.git`.
 3. Activate the 'Better Asset Versioning' plugin.
-4. Open up your `.htaccess` file for the website you are working on.
-5. At the top of the file on line 1, copy the above code and paste it into the file.
+4. Open up your `.htaccess` file for Apache or the `domain.conf` file on Nginx for the website you are working on.
+5. Copy the above code and paste it into the file.
+    - For Apache, it goes on line 1.
+    - For VVV, I put it on line 1 in the `vvv/config/nginx-config/nginx-wp-common.conf` file. 
 6. Save it.
 6. Close it.
 

@@ -1,13 +1,13 @@
 <?php
 /**
- * Better Asset Versioning
+ * Better Asset Versioning LAB
  *
  * @package     KnowTheCode\BetterAssetVersioning
  * @author      hellofromTonya
  * @license     GPL-2.0+
  *
  * @wordpress-plugin
- * Plugin Name: Better Asset Versioning
+ * Plugin Name: Better Asset Versioning LAB
  * Plugin URI:  https://github.com/KnowTheCode/BetterAssetVersioning
  * Description: Improve asset version control by embedding the version number into the URL instead of as an optional query parameter.
  * Version:     1.0.0
@@ -36,7 +36,7 @@ function launch() {
 	$config = require_once( trailingslashit( __DIR__ ) . 'config/url-converter.php' );
 
 	if ( $config['is_enabled'] === true ) {
-		get_url_converter();
+		get_url_converter( $config );
 	}
 }
 

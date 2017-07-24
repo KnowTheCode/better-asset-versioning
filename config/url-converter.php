@@ -1,8 +1,8 @@
 <?php
 /**
- * Description
+ * Asset URL Converter Runtime configuration parameters.
  *
- * @package     ${NAMESPACE}
+ * @package     KnowTheCode\BetterAssetVersioning
  * @since       1.0.0
  * @author      hellofromTonya
  * @link        https://KnowTheCode.io
@@ -12,7 +12,7 @@
 namespace KnowTheCode\BetterAssetVersioning;
 
 return array(
-	'is_enabled'                       => false,
+	'is_enabled'                       => true,
 	'version_query_key_with_separator' => '?ver=',
 	'version_query_key'                => 'ver=',
 	'version_query_key_length'         => 4,

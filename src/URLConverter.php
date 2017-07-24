@@ -56,8 +56,8 @@ class URLConverter {
 	 * @return void
 	 */
 	protected function init_events() {
-		add_filter( 'script_loader_src', array( $this, 'change_src_to_embed_version' ), 9999 );
-		add_filter( 'style_loader_src', array( $this, 'change_src_to_embed_version' ), 9999 );
+		add_filter( 'script_loader_src', array( $this, 'run_version_converter' ), 9999, 2 );
+		add_filter( 'style_loader_src', array( $this, 'run_version_converter' ), 9999, 2 );
 	}
 
 	/**
@@ -67,64 +67,70 @@ class URLConverter {
 	 * @since 1.0.0
 	 *
 	 * @param string $asset_url URL of the asset
+	 * @param string $handle Handle of the asset
 	 *
 	 * @return string
 	 */
-	function change_src_to_embed_version( $asset_url ) {
+	function run_version_converter( $asset_url, $handle ) {
+		$version_number = $this->get_enqueued_version_number( $handle );
+		if ( $version_number == null ) {
+			return $asset_url;
+			return remove_query_arg( 'ver', $asset_url );
+		}
+
+		return $this->change_src_to_embed_version( $asset_url, $version_number );
+	}
+
+	/**
+	 * Change the asset's URL to embed the version number instead of
+	 * having it as a query parameter.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string $asset_url URL of the asset
+	 * @param string $version_number Asset's version number
+	 *
+	 * @return string
+	 */
+	function change_src_to_embed_version( $asset_url, $version_number ) {
 		$asset_url_parts = parse_url( $asset_url );
 		if ( false === $asset_url_parts ) {
 			return $asset_url;
 		}
 
-		if ( $this->is_okay_to_embed_version( $asset_url, $asset_url_parts ) ) {
-			return $this->reassemble( $asset_url_parts );
+		if ( ! $this->is_okay_to_embed_version( $asset_url, $asset_url_parts ) ) {
+			return $asset_url;
 		}
 
-		return $asset_url;
-	}
-
-	/**
-	 * Let's reassemble the URL with the version number as a folder.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param array $url_parts Parts of the URL
-	 *
-	 * @return string
-	 */
-	protected function reassemble( array $url_parts ) {
-		$version_number      = $this->get_version_number( $url_parts['query'] );
-		$asset_file_pathinfo = pathinfo( $url_parts['path'] );
-
-		$scheme = isset( $url_parts['scheme'] )
-			? $url_parts['scheme'] . ':'
-			: '';
-
-		return sprintf( '%s//%s%s/betterassetversioning-%s/%s',
-			$scheme,
-			$url_parts['host'],
-			$asset_file_pathinfo['dirname'],
-			$version_number,
-			$asset_file_pathinfo['basename']
+		return preg_replace(
+			'/\.(min.js|min.css|js|css)\?ver=(.+)$/',
+			'.$2.$1',
+			$asset_url
 		);
 	}
 
 	/**
-	 * Get the version number.
-	 *
-	 * It uses the helper function get_substring().  The starting position is
-	 * 4 characters in, as the query key is ver=.
+	 * Get the original "registered" enqueued version number
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $url_query
+	 * @param string $handle Handle of the asset
 	 *
 	 * @return string
 	 */
-	protected function get_version_number( $url_query ) {
-		$version_number = get_substring( $url_query, $this->version_query_key_length );
+	protected function get_enqueued_version_number( $handle ) {
+		$wp_scripts = wp_scripts();
+		$wp_styles  = wp_styles();
 
-		return trim( $version_number );
+		if ( array_key_exists( $handle, $wp_scripts->registered ) ) {
+			$asset_config = $wp_scripts->registered[ $handle ];
+		} elseif ( array_key_exists( $handle, $wp_styles->registered ) ) {
+			$asset_config = $wp_styles->registered[ $handle ];
+		} else {
+			return null;
+		}
+
+		return $asset_config->ver;
 	}
 
 	/**

@@ -11,25 +11,26 @@
 
 if ( ! function_exists( 'change_theme_stylesheet_uri_to_min_version' ) ) :
 
-	add_filter( 'stylesheet_uri', 'change_theme_stylesheet_uri_to_min_version' );
+	add_filter( 'stylesheet_uri', 'change_theme_stylesheet_uri_to_min_version', 9999, 2 );
 	/**
 	 * Change the theme's stylesheet to the minified version when not in debug mode.
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $stylesheet_uri Stylesheet URI
+	 * @param string $stylesheet_uri Stylesheet URL
+	 * @param string $stylesheet_dir_uri Stylesheet's directory URL
 	 *
 	 * @return string
 	 */
-	function change_theme_stylesheet_uri_to_min_version( $stylesheet_uri ) {
+	function change_theme_stylesheet_uri_to_min_version( $stylesheet_uri, $stylesheet_dir_uri ) {
 		if ( site_is_in_development_mode() ) {
 			return $stylesheet_uri;
 		}
 
-		$minified_stylesheet_uri = get_stylesheet_directory_uri() . '/style.min.css';
+		$minified_stylesheet_file = '/style.min.css';
 
-		return file_exists( $minified_stylesheet_uri )
-			? $minified_stylesheet_uri
+		return file_exists( get_stylesheet_directory() . $minified_stylesheet_file )
+			? $stylesheet_dir_uri . $minified_stylesheet_file
 			: $stylesheet_uri;
 	}
 
