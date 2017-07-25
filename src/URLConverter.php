@@ -25,6 +25,7 @@ class URLConverter {
 	protected $version_query_key_with_separator;
 	protected $version_query_key = 'ver=';
 	protected $version_query_key_length = 4;
+	protected $inline_version = 'inline';
 
 	public function __construct( array $config ) {
 		$this->config = $config;
@@ -43,6 +44,7 @@ class URLConverter {
 	protected function init_parameters() {
 		$this->local_url = parse_url( home_url() );
 
+		$this->inline_version                   = $this->config['inline_version'];
 		$this->version_query_key_with_separator = $this->config['version_query_key_with_separator'];
 		$this->version_query_key                = $this->config['version_query_key'];
 		$this->version_query_key_length         = strlen( $this->version_query_key );
@@ -72,13 +74,21 @@ class URLConverter {
 	 * @return string
 	 */
 	function run_version_converter( $asset_url, $handle ) {
+		if ( $this->skip_this_asset( $handle ) ) {
+			return $asset_url;
+		}
+
 		$version_number = $this->get_enqueued_version_number( $handle );
 		if ( $version_number == null ) {
 			return $asset_url;
-			return remove_query_arg( 'ver', $asset_url );
+//			return remove_query_arg( 'ver', $asset_url );
 		}
 
 		return $this->change_src_to_embed_version( $asset_url, $version_number );
+	}
+
+	protected function skip_this_asset( $handle ) {
+		return in_array( $handle, $this->config['skip_these_assets'] );
 	}
 
 	/**
@@ -134,6 +144,19 @@ class URLConverter {
 	}
 
 	/**
+	 * Check if we should skip this conversion.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param mixed $version_number Version number
+	 *
+	 * @return bool
+	 */
+	protected function bypass_and_strip( $version_number ) {
+		return ( $version_number === $this->inline_version || $version_number == null );
+	}
+
+	/**
 	 * Checks if we should embed the version for this particular
 	 * asset URL. The ones that we don't want to touch include:
 	 *
@@ -157,7 +180,34 @@ class URLConverter {
 			return false;
 		}
 
+		if ( $this->ends_with_number( $asset_url_parts['path'] ) ) {
+			return false;
+		}
+
 		return $this->is_local_asset( $asset_url_parts );
+	}
+
+	/**
+	 * Checks if the file ends with a number. Why? Some files may already have
+	 * the version number appended as a suffix.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string $file
+	 *
+	 * @return bool
+	 */
+	function ends_with_number( $file ) {
+		$paths = explode( '/', $file );
+		$file  = array_pop( $paths );
+
+		$file_parts = explode( '.', $file );
+		$filename   = array_shift( $file_parts );
+		if ( ! $filename ) {
+			return false;
+		}
+
+		return is_numeric( $filename[ strlen( $filename ) - 1 ] );
 	}
 
 	/**
