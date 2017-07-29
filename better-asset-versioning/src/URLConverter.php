@@ -2,11 +2,6 @@
 /**
  * URL Converter
  *
- * This class handles:
- *
- * 1. Validating if we should reassemble the asset's URL
- * 2. If yes, then it moves the version number into the URL.
- *
  * @package     KnowTheCode\BetterAssetVersioning
  * @since       1.0.0
  * @author      hellofromTonya
@@ -19,13 +14,7 @@ namespace KnowTheCode\BetterAssetVersioning;
 class URLConverter {
 
 	protected $config;
-
-	protected $local_url = array();
-	protected $local_scheme = '';
-	protected $version_query_key_with_separator;
-	protected $version_query_key = 'ver=';
-	protected $version_query_key_length = 4;
-	protected $inline_version = 'inline';
+	protected $local_url = '';
 
 	public function __construct( array $config ) {
 		$this->config = $config;
@@ -35,199 +24,149 @@ class URLConverter {
 	}
 
 	/**
-	 * Initialize the parameters.
+	 * Initialize the parameters/properties.
 	 *
 	 * @since 1.0.0
 	 *
 	 * @return void
 	 */
 	protected function init_parameters() {
-		$this->local_url = parse_url( home_url() );
-
-		$this->inline_version                   = $this->config['inline_version'];
-		$this->version_query_key_with_separator = $this->config['version_query_key_with_separator'];
-		$this->version_query_key                = $this->config['version_query_key'];
-		$this->version_query_key_length         = strlen( $this->version_query_key );
+		$parsed_site_url = parse_url( home_url() );
+		if ( isset( $parsed_site_url['host'] ) ) {
+			$this->local_url = $parsed_site_url['host'];
+		}
 	}
 
 	/**
-	 * Initialize the events by registering the callbacks.
+	 * Initialize the events.
 	 *
 	 * @since 1.0.0
 	 *
 	 * @return void
 	 */
 	protected function init_events() {
-		add_filter( 'script_loader_src', array( $this, 'run_version_converter' ), 9999, 2 );
-		add_filter( 'style_loader_src', array( $this, 'run_version_converter' ), 9999, 2 );
+		add_filter( 'script_loader_src', array( $this, 'run' ), 9999, 2 );
+		add_filter( 'style_loader_src', array( $this, 'run' ), 9999, 2 );
 	}
 
 	/**
-	 * Change the asset's URL to embed the version number instead of
-	 * having it as a query parameter.
+	 * Process the stylesheet or script's URL.  If it passes
+	 * the checks, then the version number will be converted
+	 * into the filename.{version number}.ext.
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $asset_url URL of the asset
-	 * @param string $handle Handle of the asset
+	 * @param string $asset_url Style/script's URL
+	 * @param string $handle Style/script's enqueued handle.
 	 *
 	 * @return string
 	 */
-	function run_version_converter( $asset_url, $handle ) {
+	public function run( $asset_url, $handle ) {
+		if ( is_admin() ) {
+			return $asset_url;
+		}
+
 		if ( $this->skip_this_asset( $handle ) ) {
 			return $asset_url;
 		}
 
-		$version_number = $this->get_enqueued_version_number( $handle );
-		if ( $version_number == null ) {
+		$parsed_url = parse_url( $asset_url );
+		if ( ! $this->is_well_formed( $parsed_url ) ) {
 			return $asset_url;
-//			return remove_query_arg( 'ver', $asset_url );
 		}
 
-		return $this->change_src_to_embed_version( $asset_url, $version_number );
+		if ( ! $this->has_version_query_string( $parsed_url ) ) {
+			return $asset_url;
+		}
+
+		if ( ! $this->is_local_asset( $parsed_url['host'] ) ) {
+			return remove_query_arg( 'ver', $asset_url );
+		}
+
+		// another check that looks for numbers on the end of the
+		// filename.
+
+		return $this->do_conversion( $asset_url );
 	}
 
+	/**
+	 * Checks if the URL is well-formed.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param array $parsed_url Parsed URL
+	 *
+	 * @return bool
+	 */
+	protected function is_well_formed( array $parsed_url ) {
+		return isset( $parsed_url['host'] );
+	}
+
+	/**
+	 * Checks if the URL has the verion's query string.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param array $parsed_url Parsed URL
+	 *
+	 * @return bool
+	 */
+	protected function has_version_query_string( array $parsed_url ) {
+		if ( ! isset( $parsed_url['query'] ) ) {
+			return false;
+		}
+
+		return str_has_substring( $parsed_url['query'], $this->config['version_query_key'] );
+	}
+
+	/**
+	 * Checks if this asset should be skipped by comparing to
+	 * the configured handles.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string $handle The script/style's enqueued handle
+	 *
+	 * @return bool
+	 */
 	protected function skip_this_asset( $handle ) {
 		return in_array( $handle, $this->config['skip_these_assets'] );
 	}
 
 	/**
-	 * Change the asset's URL to embed the version number instead of
-	 * having it as a query parameter.
+	 * Checks if the asset is local to the website.
+	 *
+	 * External assets would be:
+	 *  - fontawesome
+	 *  - Google fonts
+	 *  - Bootstrap
+	 *  - Zurb's Foundation
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $asset_url URL of the asset
-	 * @param string $version_number Asset's version number
+	 * @param $asset_url_host
+	 *
+	 * @return bool
+	 */
+	protected function is_local_asset( $asset_url_host ) {
+		return ( $asset_url_host === $this->local_url );
+	}
+
+	/**
+	 * Do the conversion.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string $asset_url The script/style's URL
 	 *
 	 * @return string
 	 */
-	function change_src_to_embed_version( $asset_url, $version_number ) {
-		$asset_url_parts = parse_url( $asset_url );
-		if ( false === $asset_url_parts ) {
-			return $asset_url;
-		}
-
-		if ( ! $this->is_okay_to_embed_version( $asset_url, $asset_url_parts ) ) {
-			return $asset_url;
-		}
-
+	protected function do_conversion( $asset_url ) {
 		return preg_replace(
 			'/\.(min.js|min.css|js|css)\?ver=(.+)$/',
 			'.$2.$1',
 			$asset_url
 		);
-	}
-
-	/**
-	 * Get the original "registered" enqueued version number
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $handle Handle of the asset
-	 *
-	 * @return string
-	 */
-	protected function get_enqueued_version_number( $handle ) {
-		$wp_scripts = wp_scripts();
-		$wp_styles  = wp_styles();
-
-		if ( array_key_exists( $handle, $wp_scripts->registered ) ) {
-			$asset_config = $wp_scripts->registered[ $handle ];
-		} elseif ( array_key_exists( $handle, $wp_styles->registered ) ) {
-			$asset_config = $wp_styles->registered[ $handle ];
-		} else {
-			return null;
-		}
-
-		return $asset_config->ver;
-	}
-
-	/**
-	 * Check if we should skip this conversion.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param mixed $version_number Version number
-	 *
-	 * @return bool
-	 */
-	protected function bypass_and_strip( $version_number ) {
-		return ( $version_number === $this->inline_version || $version_number == null );
-	}
-
-	/**
-	 * Checks if we should embed the version for this particular
-	 * asset URL. The ones that we don't want to touch include:
-	 *
-	 * 1. Anything when we're in the admin area.
-	 * 2. Any URL that doesn't have the ?ver= query parameter. Why? There's nothing to move.
-	 * 3. External URLs that are not from this particular local website, i.e. for example Google Fonts.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $asset_url Asset's URL
-	 * @param array $asset_url_parts Array of the parts of the asset's URL
-	 *
-	 * @return bool
-	 */
-	function is_okay_to_embed_version( $asset_url, array $asset_url_parts ) {
-		if ( is_admin() ) {
-			return false;
-		}
-
-		if ( ! str_has_substring( $asset_url, $this->version_query_key_with_separator ) !== false ) {
-			return false;
-		}
-
-		if ( $this->ends_with_number( $asset_url_parts['path'] ) ) {
-			return false;
-		}
-
-		return $this->is_local_asset( $asset_url_parts );
-	}
-
-	/**
-	 * Checks if the file ends with a number. Why? Some files may already have
-	 * the version number appended as a suffix.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $file
-	 *
-	 * @return bool
-	 */
-	function ends_with_number( $file ) {
-		$paths = explode( '/', $file );
-		$file  = array_pop( $paths );
-
-		$file_parts = explode( '.', $file );
-		$filename   = array_shift( $file_parts );
-		if ( ! $filename ) {
-			return false;
-		}
-
-		return is_numeric( $filename[ strlen( $filename ) - 1 ] );
-	}
-
-	/**
-	 * Check that the asset's host matches this local website.
-	 *
-	 * Why? We don't want to work on assets that are external to our website, e.g. Google Fonts.
-	 * Why? Those assets need to have their own version handlers.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param $asset_url_parts
-	 *
-	 * @return bool
-	 */
-	protected function is_local_asset( $asset_url_parts ) {
-		if ( ! isset( $asset_url_parts['host'] ) ) {
-			return false;
-		}
-
-		return ( $asset_url_parts['host'] === $this->local_url['host'] );
 	}
 
 }
